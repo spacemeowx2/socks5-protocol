@@ -96,12 +96,13 @@ impl Into<u8> for AuthMethod {
 
 /// `AuthRequest` message:
 ///
+/// <pre><code>
 /// +----------+----------+
 /// | NMETHODS | METHODS  |
 /// +----------+----------+
 /// |    1     | 1 to 255 |
 /// +----------+----------+
-///
+/// </code></pre>
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AuthRequest(pub Vec<AuthMethod>);
 
@@ -152,12 +153,13 @@ impl AuthRequest {
 
 /// `AuthResponse` message:
 ///
+/// <pre><code>
 /// +--------+
 /// | METHOD |
 /// +--------+
 /// |   1    |
 /// +--------+
-///
+/// </code></pre>
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AuthResponse(AuthMethod);
 
@@ -198,12 +200,13 @@ pub enum Command {
 
 /// `CommandRequest` message:
 ///
+/// <pre><code>
 /// +-----+-------+------+----------+----------+
 /// | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
 /// +-----+-------+------+----------+----------+
 /// |  1  | X'00' |  1   | Variable |    2     |
 /// +-----+-------+------+----------+----------+
-///
+/// </code></pre>
 #[derive(Debug)]
 pub struct CommandRequest {
     /// command (CMD).
@@ -321,12 +324,13 @@ impl CommandReply {
 
 /// `CommandResponse` message:
 ///
+/// <pre><code>
 /// +-----+-------+------+----------+----------+
 /// | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
 /// +-----+-------+------+----------+----------+
 /// |  1  | X'00' |  1   | Variable |    2     |
 /// +-----+-------+------+----------+----------+
-///
+/// </code></pre>
 #[derive(Debug)]
 pub struct CommandResponse {
     /// Reply (REP).
