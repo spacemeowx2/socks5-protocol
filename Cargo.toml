@@ -5,6 +5,7 @@ authors = ["spacemeowx2 <spacemeowx2@gmail.com>"]
 edition = "2018"
 description = "Provides types that can be read from `AsyncRead` and write to `AsyncWrite`."
 license = "MIT OR Apache-2.0"
+documentation = "https://docs.rs/socks5-protocol"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
