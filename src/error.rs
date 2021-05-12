@@ -29,6 +29,10 @@ pub enum Error {
     #[error("Command reply with error: {0:?}")]
     CommandReply(CommandReply),
 
+    /// Domain too long.
+    #[error("Domain too long {0}")]
+    DomainTooLong(usize),
+
     /// Invalid domain.
     #[error("Invalid domain {0:?}")]
     InvalidDomain(Vec<u8>),

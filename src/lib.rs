@@ -46,7 +46,7 @@ impl Version {
         }
     }
     /// Write `Version` to AsyncWrite.
-    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> io::Result<()> {
+    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> Result<()> {
         let v = match self {
             Version::V5 => 5u8,
         };
@@ -121,10 +121,10 @@ impl AuthRequest {
         Ok(AuthRequest(methods.into_iter().map(Into::into).collect()))
     }
     /// Write `AuthRequest` to AsyncWrite.
-    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> io::Result<()> {
+    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> Result<()> {
         let count = self.0.len();
         if count > 255 {
-            return Err(io::ErrorKind::InvalidInput.into());
+            return Err(Error::TooManyMethods);
         }
 
         writer.write_all(&[count as u8]).await?;
@@ -175,7 +175,7 @@ impl AuthResponse {
         Ok(AuthResponse(method[0].into()))
     }
     /// Write `AuthResponse` to AsyncWrite.
-    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> io::Result<()> {
+    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> Result<()> {
         writer.write_all(&[self.0.into()]).await?;
         Ok(())
     }
@@ -255,7 +255,7 @@ impl CommandRequest {
         })
     }
     /// Write `CommandRequest` to `AsyncWrite`.
-    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> io::Result<()> {
+    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> Result<()> {
         let cmd = match self.command {
             Command::Connect => 1u8,
             Command::Bind => 2,
@@ -395,7 +395,7 @@ impl CommandResponse {
         Ok(CommandResponse { reply, address })
     }
     /// Write `CommandResponse` to `AsyncWrite`.
-    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> io::Result<()> {
+    pub async fn write(&self, mut writer: impl AsyncWrite + Unpin) -> Result<()> {
         writer.write_all(&[0x05, self.reply.to_u8(), 0x00]).await?;
         self.address.write(writer).await?;
         Ok(())
@@ -425,10 +425,10 @@ impl From<SocketAddr> for Address {
 
 impl Address {
     /// Convert `Address` to `SocketAddr`. If `Address` is a domain, return `std::io::ErrorKind::InvalidInput`
-    pub fn to_socket_addr(self) -> io::Result<SocketAddr> {
+    pub fn to_socket_addr(self) -> Result<SocketAddr> {
         match self {
             Address::SocketAddr(s) => Ok(s),
-            _ => Err(io::ErrorKind::InvalidInput.into()),
+            _ => Err(Error::Io(io::ErrorKind::InvalidInput.into())),
         }
     }
     async fn read_port<R>(mut reader: R) -> Result<u16>
@@ -440,7 +440,7 @@ impl Address {
         let port = u16::from_be_bytes(buf);
         Ok(port)
     }
-    async fn write_port<W>(mut writer: W, port: u16) -> io::Result<()>
+    async fn write_port<W>(mut writer: W, port: u16) -> Result<()>
     where
         W: AsyncWrite + Unpin,
     {
@@ -448,7 +448,7 @@ impl Address {
         Ok(())
     }
     /// Write `Address` to `AsyncWrite`.
-    pub async fn write<W>(&self, mut writer: W) -> io::Result<()>
+    pub async fn write<W>(&self, mut writer: W) -> Result<()>
     where
         W: AsyncWrite + Unpin,
     {
@@ -465,7 +465,7 @@ impl Address {
             }
             Address::Domain(domain, port) => {
                 if domain.len() >= 256 {
-                    return Err(io::ErrorKind::InvalidInput.into());
+                    return Err(Error::DomainTooLong(domain.len()));
                 }
                 let header = [0x03, domain.len() as u8];
                 writer.write_all(&header).await?;
