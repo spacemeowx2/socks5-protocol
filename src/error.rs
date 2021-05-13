@@ -48,3 +48,13 @@ pub enum Error {
 
 /// Library level `Result`.
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
+
+impl Error {
+    /// Map `Error` to `std::io::Error`.
+    pub fn to_io_err(self) -> io::Error {
+        match self {
+            Error::Io(e) => e,
+            e => io::Error::new(io::ErrorKind::Other, e),
+        }
+    }
+}
