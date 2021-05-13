@@ -16,6 +16,9 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 pub use error::{Error, Result};
 
 mod error;
+#[cfg(feature = "sync")]
+/// Sync version.
+pub mod sync;
 
 /// Version conatins one byte. In socks5, it should be `5`, other value will return `Error::InvalidVersion`.
 ///

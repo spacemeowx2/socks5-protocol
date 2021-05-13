@@ -1,6 +1,6 @@
 [package]
 name = "socks5-protocol"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["spacemeowx2 <spacemeowx2@gmail.com>"]
 edition = "2018"
 description = "Provides types that can be read from `AsyncRead` and write to `AsyncWrite`."
@@ -14,7 +14,8 @@ tokio = { version = "1.0", features = ["io-util"] }
 thiserror = "1.0"
 
 [features]
-default = []
+default = [ "sync" ]
+sync = []
 doc = ["tokio/rt-multi-thread", "tokio/macros"]
 
 [package.metadata."docs.rs"]
