@@ -8,7 +8,7 @@
 
 use std::{
     convert::TryInto,
-    io,
+    fmt, io,
     net::{Ipv4Addr, SocketAddr},
 };
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -414,6 +414,15 @@ pub enum Address {
     Domain(String, u16),
 }
 
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Address::SocketAddr(s) => fmt::Display::fmt(s, f),
+            Address::Domain(domain, port) => write!(f, "{}:{}", domain, port),
+        }
+    }
+}
+
 impl Default for Address {
     fn default() -> Self {
         Address::SocketAddr(SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), 0))
@@ -517,5 +526,19 @@ impl Address {
             }
             _ => return Err(Error::InvalidAddressType(atyp[0])),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_address_display() {
+        let addr = Address::SocketAddr("1.2.3.4:56789".parse().unwrap());
+        assert_eq!(addr.to_string(), "1.2.3.4:56789");
+
+        let addr = Address::Domain("example.com".to_string(), 80);
+        assert_eq!(addr.to_string(), "example.com:80");
     }
 }
