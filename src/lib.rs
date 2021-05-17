@@ -9,7 +9,8 @@
 use std::{
     convert::TryInto,
     fmt, io,
-    net::{Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    str::FromStr,
 };
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
@@ -435,6 +436,34 @@ impl From<SocketAddr> for Address {
     }
 }
 
+fn host_to_address(host: &str, port: u16) -> Address {
+    match str::parse::<IpAddr>(host) {
+        Ok(ip) => {
+            let addr = SocketAddr::new(ip, port);
+            addr.into()
+        }
+        Err(_) => Address::Domain(host.to_string(), port),
+    }
+}
+fn no_addr() -> io::Error {
+    io::ErrorKind::AddrNotAvailable.into()
+}
+
+impl FromStr for Address {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.splitn(2, ":");
+        let host = parts.next().ok_or_else(no_addr)?;
+        let port: u16 = parts
+            .next()
+            .ok_or_else(no_addr)?
+            .parse()
+            .map_err(|_| no_addr())?;
+        Ok(host_to_address(host, port))
+    }
+}
+
 impl Address {
     /// Convert `Address` to `SocketAddr`. If `Address` is a domain, return `std::io::ErrorKind::InvalidInput`
     pub fn to_socket_addr(self) -> Result<SocketAddr> {
@@ -540,5 +569,17 @@ mod tests {
 
         let addr = Address::Domain("example.com".to_string(), 80);
         assert_eq!(addr.to_string(), "example.com:80");
+    }
+
+    #[test]
+    fn test_address_from_str() {
+        let addr: Address = "1.2.3.4:56789".parse().unwrap();
+        assert_eq!(addr.to_string(), "1.2.3.4:56789");
+
+        let addr: Address = "example.com:80".parse().unwrap();
+        assert_eq!(addr.to_string(), "example.com:80");
+
+        let addr: Result<Address, _> = "example.com".parse();
+        assert!(addr.is_err());
     }
 }
