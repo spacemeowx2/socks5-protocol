@@ -436,8 +436,14 @@ impl From<SocketAddr> for Address {
     }
 }
 
+fn strip_brackets(host: &str) -> &str {
+    host.strip_prefix('[')
+        .and_then(|h| h.strip_suffix(']'))
+        .unwrap_or(host)
+}
+
 fn host_to_address(host: &str, port: u16) -> Address {
-    match str::parse::<IpAddr>(host) {
+    match strip_brackets(host).parse::<IpAddr>() {
         Ok(ip) => {
             let addr = SocketAddr::new(ip, port);
             addr.into()
@@ -453,13 +459,13 @@ impl FromStr for Address {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut parts = s.splitn(2, ":");
-        let host = parts.next().ok_or_else(no_addr)?;
+        let mut parts = s.rsplitn(2, ':');
         let port: u16 = parts
             .next()
             .ok_or_else(no_addr)?
             .parse()
             .map_err(|_| no_addr())?;
+        let host = parts.next().ok_or_else(no_addr)?;
         Ok(host_to_address(host, port))
     }
 }
@@ -487,6 +493,26 @@ impl Address {
     {
         writer.write_all(&port.to_be_bytes()).await?;
         Ok(())
+    }
+    /// Length of `Address` in bytes after serialized.
+    pub fn serialized_len(&self) -> Result<usize> {
+        Ok(match self {
+            Address::SocketAddr(SocketAddr::V4(_)) => {
+                // 1 byte for ATYP, 4 bytes for IPV4 address, 2 bytes for port
+                1 + 4 + 2
+            }
+            Address::SocketAddr(SocketAddr::V6(_)) => {
+                // 1 byte for ATYP, 16 bytes for IPV6 address, 2 bytes for port
+                1 + 16 + 2
+            }
+            Address::Domain(domain, _) => {
+                if domain.len() >= 256 {
+                    return Err(Error::DomainTooLong(domain.len()));
+                }
+                // 1 byte for ATYP, 1 byte for domain length, domain, 2 bytes for port
+                1 + 1 + domain.len() + 2
+            }
+        })
     }
     /// Write `Address` to `AsyncWrite`.
     pub async fn write<W>(&self, mut writer: W) -> Result<()>
@@ -581,5 +607,17 @@ mod tests {
 
         let addr: Result<Address, _> = "example.com".parse();
         assert!(addr.is_err());
+    }
+
+    #[test]
+    fn test_address_serialized_len() {
+        let addr: Address = "1.2.3.4:56789".parse().unwrap();
+        assert_eq!(addr.serialized_len().unwrap(), 7);
+
+        let addr: Address = "[::1]:56789".parse().unwrap();
+        assert_eq!(addr.serialized_len().unwrap(), 19);
+
+        let addr: Address = "example.com:80".parse().unwrap();
+        assert_eq!(addr.serialized_len().unwrap(), 15);
     }
 }
